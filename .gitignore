@@ -1,0 +1,8 @@
+.venv/*
+Datasets/Flicker8k
+Datasets/VG
+__pycache__
+*.rar
+*.zip
+KerasBaseLine/SaveModel3/*
+KerasBaseLine/SaveModel4/*
