@@ -6,3 +6,4 @@ __pycache__
 *.zip
 KerasBaseLine/SaveModel3/*
 KerasBaseLine/SaveModel4/*
+References/visualgenome.pdf
