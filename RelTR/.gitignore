@@ -1,0 +1,7 @@
+ckpt/
+*.json
+.idea/
+__pycache__/
+
+data/Incidents
+data/vg/images
