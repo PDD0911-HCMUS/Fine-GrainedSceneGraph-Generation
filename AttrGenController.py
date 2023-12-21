@@ -1,14 +1,27 @@
 import os
+from DETRController import *
+from PIL import Image
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from KerasBaseLine.Config import *
 from KerasBaseLine.ModelController import *
 from KerasBaseLine.DatasetPreparingController import *
-import matplotlib.pyplot as plt
 
+import matplotlib.pyplot as plt
+import torch
+torch.set_grad_enabled(False)
 
 def decode_and_resize(img_path):
     img = tf.io.read_file(img_path)
     img = tf.image.decode_jpeg(img, channels=3)
+    print(type(img))
+    img = tf.image.resize(img, IMAGE_SIZE)
+    img = tf.image.convert_image_dtype(img, tf.float32)
+    return img
+
+def NomarlizeImage(img):
+    img = tf.keras.preprocessing.image.img_to_array(img)
+    img = tf.convert_to_tensor(img)
+    #img = tf.image.decode_jpeg(img, channels=3)
     img = tf.image.resize(img, IMAGE_SIZE)
     img = tf.image.convert_image_dtype(img, tf.float32)
     return img
@@ -84,8 +97,67 @@ def MainGenerateAttr(imageUrl):
 
     return imgReturn, decoded_caption, imageName
 
+def LoadAttribute():
+    captions_mapping, text_data = load_captions_data(os.path.join("Datasets/VG/Extract","Attr.token.txt"))
+
+    vectorization = TextVectorization(
+        max_tokens=VOCAB_SIZE,
+        output_mode="int",
+        output_sequence_length=SEQ_LENGTH,
+        standardize=custom_standardization,
+    )
+    vectorization.adapt(text_data)
+
+    vocab = vectorization.get_vocabulary()
+    index_lookup = dict(zip(range(len(vocab)), vocab))
+    max_decoded_sentence_length = SEQ_LENGTH - 1
+
+    return vectorization, index_lookup, max_decoded_sentence_length
+
+def MainGenerateAttr2(image):
+    imgReturn = image
+    scores, boxes, listImObj = MainDetect(image)
+    vectorization, index_lookup, max_decoded_sentence_length = LoadAttribute()
+    caption_model = CreateModel()
+
+    for item in listImObj:
+        imageUrl = NomarlizeImage(item)
+        img = imageUrl.numpy().clip(0, 255).astype(np.uint8)
+        #imgReturn = img
+
+        # Pass the image to the CNN
+        img = tf.expand_dims(imageUrl, 0)
+        img = caption_model.cnn_model(img)
+
+        # Pass the image features to the Transformer encoder
+        encoded_img = caption_model.encoder(img, training=False)
+
+        # Generate the caption using the Transformer decoder
+        decoded_caption = "<start> "
+        for i in range(max_decoded_sentence_length):
+            tokenized_caption = vectorization([decoded_caption])[:, :-1]
+            mask = tf.math.not_equal(tokenized_caption, 0)
+            predictions = caption_model.decoder(
+                tokenized_caption, encoded_img, training=False, mask=mask
+            )
+            sampled_token_index = np.argmax(predictions[0, i, :])
+            sampled_token = index_lookup[sampled_token_index]
+            if sampled_token == "<end>":
+                break
+            decoded_caption += " " + sampled_token
+
+        decoded_caption = decoded_caption.replace("<start> ", "")
+        decoded_caption = decoded_caption.replace(" <end>", "").strip()
+        print("Predicted Caption: ", decoded_caption)
+
+    return imgReturn, decoded_caption
+
 if __name__=="__main__":
-    imgReturn, decoded_caption, imageName = MainGenerateAttr('Datasets/VG/Extract/ImageObj/964_jacket.jpg')
-    plt.title(decoded_caption)
-    plt.imshow(imgReturn)
-    plt.show()
+    imgUrl = 'Datasets/VG/VG_100K/200.jpg'
+    image = Image.open(imgUrl)
+    imgReturn, decoded_caption = MainGenerateAttr2(image)
+    
+    # imgReturn, decoded_caption, imageName = MainGenerateAttr('Datasets/VG/Extract/ImageObj/964_jacket.jpg')
+    # plt.title(decoded_caption)
+    # plt.imshow(imgReturn)
+    # plt.show()
