@@ -51,7 +51,7 @@ def rescale_bboxes(out_bbox, size):
 def CreateModelReltr():
 
     position_embedding = PositionEmbeddingSine(128, normalize=True)
-    backbone = Backbone('resnet50', False, False, False)
+    backbone = Backbone('resnet101', False, False, False)
     backbone = Joiner(backbone, position_embedding)
     backbone.num_channels = 2048
 
@@ -163,5 +163,5 @@ def MainProcess(imageUrl, topk = 15):
         plt.show() # show the output
 
 if __name__=="__main__":
-    imageUrl = 'Datasets/VG/VG_100K/200.jpg'
+    imageUrl = 'Datasets/VG/VG_100K/235.jpg'
     MainProcess(imageUrl)

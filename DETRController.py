@@ -123,6 +123,7 @@ def LoadDETR():
 def MainDetect(im):
     # standard PyTorch mean-std input image normalization
     listImObj = []
+    listObj = []
     transform = T.Compose([
         T.Resize(800),
         T.ToTensor(),
@@ -142,17 +143,22 @@ def MainDetect(im):
 
     # keep only predictions with 0.7+ confidence
     probas = outputs['pred_logits'].softmax(-1)[0, :, :-1]
-    keep = probas.max(-1).values > 0.7
+    #keep = probas.max(-1).values > 0.7
+    keep = probas.max(-1).values >= 0.89
 
     # convert boxes from [0; 1] to image scales
     bboxes_scaled = rescale_bboxes(outputs['pred_boxes'][0, keep], im.size)
 
-    for (xmin, ymin, xmax, ymax) in bboxes_scaled.tolist():
-        print(xmin, ymin, xmax, ymax)
+    for (xmin, ymin, xmax, ymax), p in zip(bboxes_scaled.tolist(), probas[keep]):
+        #print(xmin, ymin, xmax, ymax)
+        cl = p.argmax()
+        text = f'{CLASSES[cl]}'
         imCrop = im.crop((xmin, ymin, xmax, ymax))
         listImObj.append(imCrop)
+        listObj.append(text)
+        print(text)
     
-    return probas[keep], bboxes_scaled, listImObj
+    return probas[keep], bboxes_scaled, listImObj, listObj
 
 def PlotEachObject(listImObj):
     col = 5
@@ -171,16 +177,16 @@ def plot_results(pil_img, prob, boxes):
         ax.add_patch(plt.Rectangle((xmin, ymin), xmax - xmin, ymax - ymin,
                                    fill=False, color=c, linewidth=3))
         cl = p.argmax()
-        text = f'{CLASSES[cl]}: {p[cl]:0.2f}'
-        ax.text(xmin, ymin, text, fontsize=15,
-                bbox=dict(facecolor='yellow', alpha=0.5))
+        # text = f'{CLASSES[cl]}: {p[cl]:0.2f}'
+        # ax.text(xmin, ymin, text, fontsize=15,
+        #         bbox=dict(facecolor='yellow', alpha=0.5))
     plt.axis('off')
     plt.show()
 
 
-# url = 'Datasets/VG/VG_100K/200.jpg'
+# url = 'Datasets/VG/VG_100K/1.jpg'
 # im = Image.open(url)
 
-# scores, boxes, listImObj = MainDetect(im)
+# scores, boxes, listImObj, listObj = MainDetect(im)
 # #PlotEachObject(listImObj)
 # plot_results(im, scores, boxes)

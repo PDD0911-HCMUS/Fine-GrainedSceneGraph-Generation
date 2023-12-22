@@ -116,11 +116,23 @@ def LoadAttribute():
 
 def MainGenerateAttr2(image):
     imgReturn = image
-    scores, boxes, listImObj = MainDetect(image)
+    scores, boxes, listImObj, listObj = MainDetect(image)
+    print(len(listImObj))
     vectorization, index_lookup, max_decoded_sentence_length = LoadAttribute()
     caption_model = CreateModel()
+    # Determine the grid size dynamically
+    grid_rows = int(len(listImObj) ** 0.5)
+    grid_cols = len(listImObj) // grid_rows if len(listImObj) % grid_rows == 0 else len(listImObj) // grid_rows + 1
+    fig, axes = plt.subplots(grid_rows, grid_cols, figsize=(16, 9))
+    
+    axes = axes.flatten()
 
-    for item in listImObj:
+    # Initialize all axes as empty if no image path exists for them
+    for ax in axes[len(listImObj):]:
+        ax.axis('off')
+        ax.set_visible(False)
+    for index, (item, obj, ax) in enumerate(zip(listImObj, listObj, axes)):
+        ax.imshow(item)
         imageUrl = NomarlizeImage(item)
         img = imageUrl.numpy().clip(0, 255).astype(np.uint8)
         #imgReturn = img
@@ -145,15 +157,26 @@ def MainGenerateAttr2(image):
             if sampled_token == "<end>":
                 break
             decoded_caption += " " + sampled_token
-
+        
         decoded_caption = decoded_caption.replace("<start> ", "")
         decoded_caption = decoded_caption.replace(" <end>", "").strip()
-        print("Predicted Caption: ", decoded_caption)
+        print("Predicted Orrigin Attribute: ", decoded_caption)
+        decoded_caption = decoded_caption.split('is')
+        decoded_caption[0] = obj
+        decoded_caption = ' '.join(decoded_caption)
+        print("Predicted Attribute: ", decoded_caption)
+        ax.set_title(decoded_caption)
+        ax.axis('off')
+    # Adjust layout to prevent overlap
+    plt.tight_layout()
+
+    # Show the plot
+    plt.show()
 
     return imgReturn, decoded_caption
 
 if __name__=="__main__":
-    imgUrl = 'Datasets/VG/VG_100K/200.jpg'
+    imgUrl = 'Datasets/VG/VG_100K/640.jpg'
     image = Image.open(imgUrl)
     imgReturn, decoded_caption = MainGenerateAttr2(image)
     
