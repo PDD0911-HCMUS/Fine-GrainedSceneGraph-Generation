@@ -130,7 +130,7 @@ def MainGenerateAttr2(image):
     # Initialize all axes as empty if no image path exists for them
     for ax in axes[len(listImObj):]:
         ax.axis('off')
-        ax.set_visible(False)
+        ax.set_visible(False)   
     for index, (item, obj, ax) in enumerate(zip(listImObj, listObj, axes)):
         ax.imshow(item)
         imageUrl = NomarlizeImage(item)
@@ -175,10 +175,44 @@ def MainGenerateAttr2(image):
 
     return imgReturn, decoded_caption
 
-if __name__=="__main__":
-    imgUrl = 'Datasets/VG/VG_100K/640.jpg'
-    image = Image.open(imgUrl)
-    imgReturn, decoded_caption = MainGenerateAttr2(image)
+def GenerateAttr(img):
+    vectorization, index_lookup, max_decoded_sentence_length = LoadAttribute()
+    caption_model = CreateModel()
+
+    imageUrl = NomarlizeImage(img)
+    img = imageUrl.numpy().clip(0, 255).astype(np.uint8)
+    #imgReturn = img
+
+    # Pass the image to the CNN
+    img = tf.expand_dims(imageUrl, 0)
+    img = caption_model.cnn_model(img)
+
+    # Pass the image features to the Transformer encoder
+    encoded_img = caption_model.encoder(img, training=False)
+
+    # Generate the caption using the Transformer decoder
+    decoded_caption = "<start> "
+    for i in range(max_decoded_sentence_length):
+        tokenized_caption = vectorization([decoded_caption])[:, :-1]
+        mask = tf.math.not_equal(tokenized_caption, 0)
+        predictions = caption_model.decoder(
+            tokenized_caption, encoded_img, training=False, mask=mask
+        )
+        sampled_token_index = np.argmax(predictions[0, i, :])
+        sampled_token = index_lookup[sampled_token_index]
+        if sampled_token == "<end>":
+            break
+        decoded_caption += " " + sampled_token
+    
+    decoded_caption = decoded_caption.replace("<start> ", "")
+    decoded_caption = decoded_caption.replace(" <end>", "").strip()
+    #print("Predicted Attribute: ", decoded_caption)
+    return decoded_caption
+
+# if __name__=="__main__":
+#     imgUrl = 'Datasets/VG/VG_100K/640.jpg'
+#     image = Image.open(imgUrl)
+#     imgReturn, decoded_caption = MainGenerateAttr2(image)
     
     # imgReturn, decoded_caption, imageName = MainGenerateAttr('Datasets/VG/Extract/ImageObj/964_jacket.jpg')
     # plt.title(decoded_caption)

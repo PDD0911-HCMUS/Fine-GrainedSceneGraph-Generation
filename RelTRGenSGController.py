@@ -1,7 +1,9 @@
+from AttrGenController import GenerateAttr
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as T 
+import pandas as pd
 
 from PIL import Image
 import requests
@@ -51,7 +53,7 @@ def rescale_bboxes(out_bbox, size):
 def CreateModelReltr():
 
     position_embedding = PositionEmbeddingSine(128, normalize=True)
-    backbone = Backbone('resnet101', False, False, False)
+    backbone = Backbone('resnet50', False, False, False)
     backbone = Joiner(backbone, position_embedding)
     backbone.num_channels = 2048
 
@@ -75,6 +77,9 @@ def CreateModelReltr():
 
 def MainProcess(imageUrl, topk = 15):
 
+    lstNewGraph = []
+    lstOrgGraph = []
+
     model = CreateModelReltr()
     model.eval()
 
@@ -87,7 +92,8 @@ def MainProcess(imageUrl, topk = 15):
 
     #imageUrl = 'Datasets/VG/VG_100K/150.jpg'
     im = Image.open(imageUrl)
-    plt.imshow(im)
+    # plt.imshow(im)
+    imageReturn = im
     img = transform(im).unsqueeze(0)
 
     # propagate through the model
@@ -104,6 +110,8 @@ def MainProcess(imageUrl, topk = 15):
     # convert boxes from [0; 1] to image scales
     sub_bboxes_scaled = rescale_bboxes(outputs['sub_boxes'][0, keep], im.size)
     obj_bboxes_scaled = rescale_bboxes(outputs['obj_boxes'][0, keep], im.size)
+    sub_bboxes = []
+    obj_bboxes = []
 
     #topk = 15 # display up to 10 images
     keep_queries = torch.nonzero(keep, as_tuple=True)[0]
@@ -142,6 +150,9 @@ def MainProcess(imageUrl, topk = 15):
 
         fig, axs = plt.subplots(ncols=len(indices), nrows=3, figsize=(16, 9))
         for idx, ax_i, (sxmin, symin, sxmax, symax), (oxmin, oymin, oxmax, oymax) in zip(keep_queries, axs.T, sub_bboxes_scaled[indices], obj_bboxes_scaled[indices]):
+            sub_bboxes.append((sxmin.item(), symin.item(), sxmax.item(), symax.item()))
+            obj_bboxes.append((oxmin.item(), oymin.item(), oxmax.item(), oymax.item()))
+            
             ax = ax_i[0]
             ax.imshow(dec_attn_weights_sub[0, idx].view(h, w))
             ax.axis('off')
@@ -155,13 +166,51 @@ def MainProcess(imageUrl, topk = 15):
                                         fill=False, color='blue', linewidth=2.5))
             ax.add_patch(plt.Rectangle((oxmin, oymin), oxmax - oxmin, oymax - oymin,
                                         fill=False, color='orange', linewidth=2.5))
-
+            
+            imCropSub = imageReturn.crop((sxmin.item(), symin.item(), sxmax.item(), symax.item()))
+            attSub = GenerateAttr(imCropSub)
+            imCropObj = imageReturn.crop((oxmin.item(), oymin.item(), oxmax.item(), oymax.item()))
+            attObj = GenerateAttr(imCropObj)
+            newGraph = {
+                'AttSub': attSub.split(' is ')[-1],
+                'Sub': CLASSES[probas_sub[idx].argmax()],
+                'Rel': REL_CLASSES[probas[idx].argmax()],
+                'AttObj': attObj.split(' is ')[-1],
+                'Obj': CLASSES[probas_obj[idx].argmax()]
+            }
+            orgGraph = {
+                'Sub': CLASSES[probas_sub[idx].argmax()],
+                'Rel': REL_CLASSES[probas[idx].argmax()],
+                'Obj': CLASSES[probas_obj[idx].argmax()]
+            }
+            lstNewGraph.append(newGraph)
+            lstOrgGraph.append(orgGraph)
             ax.axis('off')
-            ax.set_title(CLASSES[probas_sub[idx].argmax()]+' '+REL_CLASSES[probas[idx].argmax()]+' '+CLASSES[probas_obj[idx].argmax()], fontsize=10)
+            print('New graph: ', attSub.split(' is ')[-1] + ' ' + CLASSES[probas_sub[idx].argmax()]+' '+REL_CLASSES[probas[idx].argmax()]+ ' ' + attObj.split(' is ')[-1] + ' '+CLASSES[probas_obj[idx].argmax()])
+            print('Origin graph: ', CLASSES[probas_sub[idx].argmax()]+' '+REL_CLASSES[probas[idx].argmax()]+' '+CLASSES[probas_obj[idx].argmax()])
+            print(20*'=')
+            ax.set_title(attSub + ' ' + CLASSES[probas_sub[idx].argmax()]+' '+REL_CLASSES[probas[idx].argmax()]+ ' ' + attObj + ' '+CLASSES[probas_obj[idx].argmax()], fontsize=10)
 
+        # fill dataframe with one row per object, one attribute per column
+        df = pd.DataFrame([t.__dict__ for t in lstNewGraph ])
+
+        print(df)
         fig.tight_layout()
         plt.show() # show the output
+    return sub_bboxes, obj_bboxes, imageReturn
 
 if __name__=="__main__":
     imageUrl = 'Datasets/VG/VG_100K/235.jpg'
-    MainProcess(imageUrl)
+    sub_bboxes_scaled,obj_bboxes_scaled,imageReturn  = MainProcess(imageUrl)
+    # print(imageReturn)
+    # plt.imshow(imageReturn)
+    # plt.show()
+    # for (sxmin, symin, sxmax, symax), (oxmin, oymin, oxmax, oymax) in zip(sub_bboxes_scaled, obj_bboxes_scaled):
+    #     imCropSub = imageReturn.crop((sxmin, symin, sxmax, symax))
+    #     GenerateAttr(imCropSub)
+    #     imCropObj = imageReturn.crop((oxmin, oymin, oxmax, oymax))
+    #     GenerateAttr(imCropObj)
+        # plt.imshow(imCropSub)
+        # plt.show()
+        # plt.imshow(imCropObj)
+        # plt.show()
