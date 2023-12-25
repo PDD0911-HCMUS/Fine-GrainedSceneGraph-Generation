@@ -192,9 +192,15 @@ def MainProcess(imageUrl, topk = 15):
             ax.set_title(attSub + ' ' + CLASSES[probas_sub[idx].argmax()]+' '+REL_CLASSES[probas[idx].argmax()]+ ' ' + attObj + ' '+CLASSES[probas_obj[idx].argmax()], fontsize=10)
 
         # fill dataframe with one row per object, one attribute per column
-        df = pd.DataFrame([t.__dict__ for t in lstNewGraph ])
+        dfNewGraph = pd.DataFrame.from_records([item for item in lstNewGraph])
+        dfOriginalGraph = pd.DataFrame.from_records([item for item in lstOrgGraph])
 
-        print(df)
+        print(dfNewGraph)
+        print(dfOriginalGraph)
+
+        dfNewGraph.to_csv('dfNewGraph.csv')
+        dfOriginalGraph.to_csv('dfOriginalGraph.csv')
+
         fig.tight_layout()
         plt.show() # show the output
     return sub_bboxes, obj_bboxes, imageReturn
