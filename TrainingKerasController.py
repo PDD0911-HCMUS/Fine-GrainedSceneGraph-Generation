@@ -27,7 +27,8 @@ def make_dataset(images, captions):
 
 # Load the dataset
 #captions_mapping, text_data = load_captions_data(os.path.join("Datasets/Flicker8k","Flickr8k.token.txt"))
-captions_mapping, text_data = load_captions_data(os.path.join("Datasets/VG/Extract","Attr.token.txt"))
+# captions_mapping, text_data = load_captions_data(os.path.join("Datasets/VG/Extract","Attr.token.txt"))
+captions_mapping, text_data = load_captions_data(os.path.join("Datasets/VG/Extract","Bbox.txt"))
 
 # Split the dataset into training and validation sets
 train_data, valid_data = train_val_split(captions_mapping)

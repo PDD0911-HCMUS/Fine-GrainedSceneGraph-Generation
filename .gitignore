@@ -1,6 +1,7 @@
 .venv/*
 Datasets/Flicker8k
 Datasets/VG
+Datasets/Incidents
 __pycache__
 *.rar
 *.zip

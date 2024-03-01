@@ -112,6 +112,22 @@ def ExtractSG():
             #print(20*'=')
     return
 
+def CollectAttr():
+    itemTxt = ''
+    sg = json.load(open(datasetSG))
+    print(len(sg))
+    with open(os.path.join("Datasets/VG/Extract", 'SG.token.txt'), 'w') as fw:
+        for item in sg[:9000]:
+            objListJS = item['objects']
+            for i, itemSg in enumerate(item['relationships'][:10], start=0):
+                nameSubject, nameObject = GetObjectNameSG(objListJS, itemSg['subject_id'], itemSg['object_id'])
+                #print(nameSubject + " " + itemSg['predicate'] + " " + nameObject)
+                lines = nameSubject + " " + itemSg['predicate'] + " " + nameObject
+                line = str(item['image_id']) + '.jpg' + '#' + str(i) + '\t' + lines + ' .' + '\n'
+                fw.write(line)
+            shutil.copyfile(dataIm + '/'+ str(item['image_id']) + '.jpg', dataExtractRootImSave +'/'+ str(item['image_id']) + '.jpg')
+            #print(20*'=')
+    return
 #STEP 1
 #ExtractSG()
 

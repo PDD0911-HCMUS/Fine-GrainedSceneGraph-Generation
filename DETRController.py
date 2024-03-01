@@ -184,9 +184,9 @@ def plot_results(pil_img, prob, boxes):
     plt.show()
 
 
-# url = 'Datasets/VG/VG_100K/1.jpg'
-# im = Image.open(url)
+url = 'Datasets/Incidents/incidents_cleaned/train/crash/1kXY1KS6V0.jpg'
+im = Image.open(url)
 
-# scores, boxes, listImObj, listObj = MainDetect(im)
-# #PlotEachObject(listImObj)
-# plot_results(im, scores, boxes)
+scores, boxes, listImObj, listObj = MainDetect(im)
+#PlotEachObject(listImObj)
+plot_results(im, scores, boxes)

@@ -201,8 +201,9 @@ def MainProcess(imageUrl, topk = 15):
 
 if __name__=="__main__":
     imageUrl = 'Datasets/VG/VG_100K/235.jpg'
+    #imageUrl = 'Datasets/Incidents/incidents_cleaned/train/crash/2E73BA248A308961D08BA44BC51469C735628045.jpg'
     im = Image.open(imageUrl)
-    #sub_bboxes_scaled,obj_bboxes_scaled,imageReturn  = MainProcess(imageUrl)
+    sub_bboxes_scaled,obj_bboxes_scaled,imageReturn  = MainProcess(imageUrl)
     plt.imshow(im)
     plt.show()
     # for (sxmin, symin, sxmax, symax), (oxmin, oymin, oxmax, oymax) in zip(sub_bboxes_scaled, obj_bboxes_scaled):
